@@ -104,7 +104,7 @@ export function CatalogHeader({
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4">
       {/* Results info */}
       <div className="text-sm text-muted-foreground">
-        Showing {startProduct}-{endProduct} of {totalProducts} products
+        Showing {startProduct}-{endProduct} of {totalProducts} products (Page {currentPage} of {totalPages})
       </div>
 
       {/* Controls */}

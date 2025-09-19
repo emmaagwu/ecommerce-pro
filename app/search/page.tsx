@@ -66,7 +66,7 @@ export default function SearchPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Search className="h-6 w-6 text-muted-foreground" />
-            <h1 className="text-2xl font-bold">Search Results for "{searchQuery}"</h1>
+            <h1 className="text-2xl font-bold">Search Results for &quot;{searchQuery}&quot;</h1>
           </div>
           <p className="text-muted-foreground">
             {totalProducts === 0 ? "No products found" : `${totalProducts} product${totalProducts === 1 ? "" : "s"} found`}
