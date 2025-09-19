@@ -8,6 +8,7 @@ interface UseProductsOptions {
   initialSort?: ProductSort
   initialPage?: number
   limit?: number
+  search?: string
 }
 
 export function useProducts({
@@ -15,6 +16,7 @@ export function useProducts({
   initialSort = { field: "createdAt", direction: "desc" },
   initialPage = 1,
   limit = 12,
+  search = "",
 }: UseProductsOptions = {}) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,7 +34,7 @@ export function useProducts({
     sizes: [] as string[],
     colors: [] as string[],
   })
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState(search || "")
 
   const fetchProducts = useCallback(async () => {
     setLoading(true)

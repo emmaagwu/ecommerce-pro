@@ -21,7 +21,7 @@ interface FilterSidebarProps {
     colors: string[]
   }
   onFiltersChange: (filters: ProductFilters) => void
-  onClearFilters: () => void
+  onClearFilters?: () => void
   className?: string
 }
 

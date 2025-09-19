@@ -8,6 +8,8 @@ import { Filter } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 interface MobileFilterSheetProps {
+  isOpen?: boolean
+  onClose?: () => void
   filters: ProductFilters
   availableFilters: {
     categories: string[]
@@ -23,6 +25,8 @@ interface MobileFilterSheetProps {
 }
 
 export function MobileFilterSheet({
+  isOpen,
+  onClose,
   filters,
   availableFilters,
   onFiltersChange,
@@ -30,7 +34,7 @@ export function MobileFilterSheet({
   activeFiltersCount,
 }: MobileFilterSheetProps) {
   return (
-    <Sheet>
+    <Sheet open={isOpen} onOpenChange={onClose ? (open) => !open && onClose() : undefined}>
       <SheetTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2 bg-transparent">
           <Filter className="h-4 w-4" />
