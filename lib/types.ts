@@ -31,7 +31,7 @@ export interface ProductFilters {
 }
 
 export interface ProductSort {
-  field: "name" | "price" | "rating" | "createdAt"
+  field: "name" | "price" | "rating" | "createdAt" | "brand"
   direction: "asc" | "desc"
 }
 

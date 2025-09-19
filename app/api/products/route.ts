@@ -86,14 +86,26 @@ export async function GET(request: NextRequest) {
 
   // Sort products
   filteredProducts.sort((a, b) => {
-    let aValue: any = a[sortField]
-    let bValue: any = b[sortField]
-
+    let aValue: string | number | Date
+    let bValue: string | number | Date
+  
     if (sortField === "createdAt") {
-      aValue = new Date(aValue).getTime()
-      bValue = new Date(bValue).getTime()
+      aValue = new Date(a.createdAt).getTime()
+      bValue = new Date(b.createdAt).getTime()
+    } else if (sortField === "price") {
+      aValue = a.price
+      bValue = b.price
+    } else if (sortField === "name") {
+      aValue = a.name.toLowerCase()
+      bValue = b.name.toLowerCase()
+    } else if (sortField === "brand") {
+      aValue = a.brand.toLowerCase()
+      bValue = b.brand.toLowerCase()
+    } else {
+      // fallback in case new field gets added later
+      return 0
     }
-
+  
     if (sortDirection === "asc") {
       return aValue > bValue ? 1 : -1
     } else {

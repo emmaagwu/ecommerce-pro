@@ -1,12 +1,12 @@
 "use client"
-import { useRouter } from "next/navigation"
+// import { useRouter } from "next/navigation"
 import { CheckCircle, Package, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 
 export default function CheckoutSuccessPage() {
-  const router = useRouter()
+  // const router = useRouter()
 
   // Generate a mock order number
   const orderNumber = `ORD-${Date.now().toString().slice(-6)}`

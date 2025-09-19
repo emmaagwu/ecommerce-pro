@@ -31,13 +31,24 @@ export default function CheckoutPage() {
     )
   }
 
-  const handleOrderSubmit = async (orderData: any) => {
+  // const handleOrderSubmit = async (orderData: any) => {
+  //   setIsProcessing(true)
+
+  //   // Simulate order processing
+  //   await new Promise((resolve) => setTimeout(resolve, 2000))
+
+  //   // Clear cart and redirect to success page
+  //   clearCart()
+  //   router.push("/checkout/success")
+  // }
+
+
+    // use this for now, you then replace it with the above when you integrate a real payment gateway
+  const handleOrderSubmit = async () => {
     setIsProcessing(true)
-
-    // Simulate order processing
+  
     await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    // Clear cart and redirect to success page
+  
     clearCart()
     router.push("/checkout/success")
   }

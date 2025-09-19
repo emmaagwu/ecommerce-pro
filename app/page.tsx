@@ -24,7 +24,6 @@ export default function HomePage() {
     totalProducts,
     totalPages,
     availableFilters,
-    searchQuery,
     updateFilters,
     updateSort,
     updatePage,

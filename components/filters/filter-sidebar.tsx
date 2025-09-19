@@ -37,7 +37,10 @@ export function FilterSidebar({
     filters.maxPrice || availableFilters.priceRange.max,
   ])
 
-  const updateFilter = (key: keyof ProductFilters, value: any) => {
+  const updateFilter = <K extends keyof ProductFilters>(
+    key: K,
+    value: ProductFilters[K]
+  ) => {
     onFiltersChange({ ...filters, [key]: value })
   }
 

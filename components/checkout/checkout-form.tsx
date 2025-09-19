@@ -11,13 +11,45 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CreditCard, Truck, User } from "lucide-react"
 
+export interface CheckoutFormData {
+  email: string
+  phone: string
+  firstName: string
+  lastName: string
+  address: string
+  apartment: string
+  city: string
+  state: string
+  zipCode: string
+  country: string
+
+  billingDifferent: boolean
+  billingFirstName: string
+  billingLastName: string
+  billingAddress: string
+  billingApartment: string
+  billingCity: string
+  billingState: string
+  billingZipCode: string
+  billingCountry: string
+
+  cardNumber: string
+  expiryDate: string
+  cvv: string
+  cardName: string
+
+  saveInfo: boolean
+  newsletter: boolean
+}
+
+
 interface CheckoutFormProps {
-  onSubmit: (data: any) => void
+  onSubmit: (data: CheckoutFormData) => void
   isProcessing: boolean
 }
 
 export function CheckoutForm({ onSubmit, isProcessing }: CheckoutFormProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CheckoutFormData>({
     // Contact Information
     email: "",
     phone: "",
@@ -54,7 +86,10 @@ export function CheckoutForm({ onSubmit, isProcessing }: CheckoutFormProps) {
     newsletter: false,
   })
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = <K extends keyof CheckoutFormData>(
+    field: K,
+    value: CheckoutFormData[K]
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
