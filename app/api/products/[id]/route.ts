@@ -16,9 +16,9 @@ import { dummyProducts } from "@/lib/dummy-data"
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  {params}: { params:  Promise<{ id: string; }>}
 ) {
-  const { id } = await context.params
+  const { id } = await params
 
   const product = dummyProducts.find((p) => p.id === id)
 
