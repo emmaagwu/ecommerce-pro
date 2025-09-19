@@ -1,106 +1,95 @@
 "use client"
 
-import Image from "next/image"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import type { ProductFilters } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
-import type { CartItem } from "@/lib/cart-store"
+import { Button } from "@/components/ui/button"
+import { X } from "lucide-react"
 
-interface OrderSummaryProps {
-  items: CartItem[]
-  total: number
+interface ActiveFiltersProps {
+  filters: ProductFilters
+  onRemoveFilter: (key: keyof ProductFilters, value?: string) => void
+  onClearAll: () => void
 }
 
-export function OrderSummary({ items, total }: OrderSummaryProps) {
-  const subtotal = total
-  const shipping = subtotal > 75 ? 0 : 9.99
-  const tax = subtotal * 0.08 // 8% tax
-  const finalTotal = subtotal + shipping + tax
+export function ActiveFilters({ filters, onRemoveFilter, onClearAll }: ActiveFiltersProps) {
+  const getActiveFilters = () => {
+    const active: Array<{ key: keyof ProductFilters; label: string; value?: string }> = []
+
+    if (filters.category) {
+      active.push({ key: "category", label: `Category: ${filters.category}` })
+    }
+
+    if (filters.subcategory) {
+      active.push({ key: "subcategory", label: `Subcategory: ${filters.subcategory}` })
+    }
+
+    if (filters.minPrice || filters.maxPrice) {
+      const min = filters.minPrice || 0
+      const max = filters.maxPrice || 999
+      active.push({ key: "minPrice", label: `Price: $${min} - $${max}` })
+    }
+
+    if (filters.brands?.length) {
+      filters.brands.forEach((brand) => {
+        active.push({ key: "brands", label: `Brand: ${brand}`, value: brand })
+      })
+    }
+
+    if (filters.sizes?.length) {
+      filters.sizes.forEach((size) => {
+        active.push({ key: "sizes", label: `Size: ${size}`, value: size })
+      })
+    }
+
+    if (filters.colors?.length) {
+      filters.colors.forEach((color) => {
+        active.push({ key: "colors", label: `Color: ${color}`, value: color })
+      })
+    }
+
+    if (filters.inStock) {
+      active.push({ key: "inStock", label: "In Stock Only" })
+    }
+
+    return active
+  }
+
+  const activeFilters = getActiveFilters()
+
+  if (activeFilters.length === 0) {
+    return null
+  }
 
   return (
-    <Card className="sticky top-8">
-      <CardHeader>
-        <CardTitle>Order Summary</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Items */}
-        <div className="space-y-4">
-          {items.map((item) => (
-            <div key={item.id} className="flex gap-4">
-              <div className="relative h-16 w-16 overflow-hidden rounded-md border flex-shrink-0">
-                <Image
-                  src={item.product.image || "/placeholder.svg"}
-                  alt={item.product.name}
-                  fill
-                  className="object-cover"
-                />
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                  {item.quantity}
-                </Badge>
-              </div>
+    <div className="flex flex-wrap items-center gap-2 p-4 bg-muted/50 rounded-lg">
+      <span className="text-sm font-medium text-muted-foreground">Active filters:</span>
 
-              <div className="flex-1 space-y-1">
-                <h4 className="font-medium text-sm line-clamp-2">{item.product.name}</h4>
-                <p className="text-xs text-muted-foreground">{item.product.brand}</p>
+      {activeFilters.map((filter, index) => (
+        <Badge
+          key={`${filter.key}-${filter.value || ""}-${index}`}
+          variant="secondary"
+          className="flex items-center gap-1 pr-1"
+        >
+          {filter.label}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-4 w-4 p-0 hover:bg-transparent"
+            onClick={() => onRemoveFilter(filter.key, filter.value)}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </Badge>
+      ))}
 
-                <div className="flex items-center gap-2 text-xs">
-                  {item.selectedSize && (
-                    <Badge variant="outline" className="text-xs">
-                      Size: {item.selectedSize}
-                    </Badge>
-                  )}
-                  {item.selectedColor && (
-                    <Badge variant="outline" className="text-xs">
-                      {item.selectedColor}
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Qty: {item.quantity}</span>
-                  <span className="font-medium text-sm">${(item.product.price * item.quantity).toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <Separator />
-
-        {/* Totals */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
-          </div>
-
-          <div className="flex justify-between text-sm">
-            <span>Shipping</span>
-            <span>{shipping === 0 ? <span className="text-green-600">Free</span> : `$${shipping.toFixed(2)}`}</span>
-          </div>
-
-          <div className="flex justify-between text-sm">
-            <span>Tax</span>
-            <span>${tax.toFixed(2)}</span>
-          </div>
-
-          <Separator />
-
-          <div className="flex justify-between font-semibold">
-            <span>Total</span>
-            <span>${finalTotal.toFixed(2)}</span>
-          </div>
-        </div>
-
-        {/* Shipping Info */}
-        {shipping === 0 && <div className="text-xs text-green-600 text-center">🎉 You qualify for free shipping!</div>}
-
-        {shipping > 0 && (
-          <div className="text-xs text-muted-foreground text-center">
-            Add ${(75 - subtotal).toFixed(2)} more for free shipping
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onClearAll}
+        className="text-muted-foreground hover:text-foreground ml-2"
+      >
+        Clear all
+      </Button>
+    </div>
   )
 }
