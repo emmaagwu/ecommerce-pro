@@ -1,147 +1,108 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { dummyProducts, categories, subcategories, brands, sizes, colors } from "@/lib/dummy-data"
-import type { ProductFilters, ProductSort, ProductsResponse } from "@/lib/types"
+import { NextResponse } from "next/server";
+import  prisma  from "@/lib/prisma";
+import type { ProductFilters, ProductSort, ProductsResponse } from "@/lib/types";
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
 
-  // Parse query parameters
-  const page = Number.parseInt(searchParams.get("page") || "1")
-  const limit = Number.parseInt(searchParams.get("limit") || "12")
-  const category = searchParams.get("category") || undefined
-  const subcategory = searchParams.get("subcategory") || undefined
-  const minPrice = searchParams.get("minPrice") ? Number.parseFloat(searchParams.get("minPrice")!) : undefined
-  const maxPrice = searchParams.get("maxPrice") ? Number.parseFloat(searchParams.get("maxPrice")!) : undefined
-  const sizesParam = searchParams.get("sizes")
-  const colorsParam = searchParams.get("colors")
-  const brandsParam = searchParams.get("brands")
-  const inStock = searchParams.get("inStock") === "true" ? true : undefined
-  const sortField = (searchParams.get("sortField") as ProductSort["field"]) || "createdAt"
-  const sortDirection = (searchParams.get("sortDirection") as ProductSort["direction"]) || "desc"
-  const search = searchParams.get("search") || undefined
+  // Pagination
+  const page = Number.parseInt(searchParams.get("page") || "1");
+  const limit = Number.parseInt(searchParams.get("limit") || "12");
+  const start = (page - 1) * limit;
 
-  // Parse array parameters
-  const sizesFilter = sizesParam ? sizesParam.split(",") : undefined
-  const colorsFilter = colorsParam ? colorsParam.split(",") : undefined
-  const brandsFilter = brandsParam ? brandsParam.split(",") : undefined
+  // Sorting
+  const sortField = (searchParams.get("sortField") as ProductSort["field"]) || "createdAt";
+  const sortDirection = (searchParams.get("sortDirection") as ProductSort["direction"]) || "desc";
 
-  const filters: ProductFilters = {
-    category,
-    subcategory,
-    minPrice,
-    maxPrice,
-    sizes: sizesFilter,
-    colors: colorsFilter,
-    brands: brandsFilter,
-    inStock,
+  // Filters
+  const categoryFilter = searchParams.get("category") || undefined;
+  const brandFilter = searchParams.get("brand") || undefined;
+  const search = searchParams.get("search") || undefined;
+  const sizesFilter = searchParams.get("sizes")?.split(",");
+  const colorsFilter = searchParams.get("colors")?.split(",");
+  const brandsFilter = searchParams.get("brands")?.split(",");
+
+  // Build Prisma query
+  const where: any = {};
+
+  if (categoryFilter) {
+    where.category = { name: categoryFilter };
   }
 
-  // Filter products
-  const filteredProducts = dummyProducts.filter((product) => {
-    // Category filter
-    if (filters.category && product.category !== filters.category) return false
+  if (brandFilter) {
+    where.brand = { name: brandFilter };
+  }
 
-    // Subcategory filter
-    if (filters.subcategory && product.subcategory !== filters.subcategory) return false
+  if (brandsFilter && brandsFilter.length > 0) {
+    where.brand = { name: { in: brandsFilter } };
+  }
 
-    // Price filters
-    if (filters.minPrice && product.price < filters.minPrice) return false
-    if (filters.maxPrice && product.price > filters.maxPrice) return false
+  if (sizesFilter && sizesFilter.length > 0) {
+    where.sizes = { some: { name: { in: sizesFilter } } };
+  }
 
-    // Size filter
-    if (filters.sizes && filters.sizes.length > 0) {
-      const hasMatchingSize = filters.sizes.some((size) => product.sizes.includes(size))
-      if (!hasMatchingSize) return false
-    }
+  if (colorsFilter && colorsFilter.length > 0) {
+    where.colors = { some: { name: { in: colorsFilter } } };
+  }
 
-    // Color filter
-    if (filters.colors && filters.colors.length > 0) {
-      const hasMatchingColor = filters.colors.some((color) =>
-        product.colors.some((productColor) => productColor.toLowerCase().includes(color.toLowerCase())),
-      )
-      if (!hasMatchingColor) return false
-    }
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+      { brand: { name: { contains: search, mode: "insensitive" } } },
+      { tags: { some: { name: { contains: search, mode: "insensitive" } } } },
+    ];
+  }
 
-    // Brand filter
-    if (filters.brands && filters.brands.length > 0) {
-      if (!filters.brands.includes(product.brand)) return false
-    }
+  // Fetch total count
+  const total = await prisma.product.count({ where });
 
-    // Stock filter
-    if (filters.inStock !== undefined && product.inStock !== filters.inStock) return false
+  // Fetch products with pagination
+  const products = await prisma.product.findMany({
+    where,
+    skip: start,
+    take: limit,
+    include: {
+      category: true,
+      subcategory: true,
+      brand: true,
+      sizes: true,
+      colors: true,
+      tags: true,
+    },
+    orderBy: {
+      [sortField]: sortDirection,
+    },
+  });
 
-    // Search filter
-    if (search) {
-      const searchLower = search.toLowerCase()
-      const matchesSearch =
-        product.name.toLowerCase().includes(searchLower) ||
-        product.description.toLowerCase().includes(searchLower) ||
-        product.brand.toLowerCase().includes(searchLower) ||
-        product.tags.some((tag) => tag.toLowerCase().includes(searchLower))
-      if (!matchesSearch) return false
-    }
+  // Fetch filter metadata
+  const [categories, brands, colors, sizes] = await Promise.all([
+    prisma.category.findMany({ select: { name: true } }),
+    prisma.brand.findMany({ select: { name: true } }),
+    prisma.color.findMany({ select: { name: true } }),
+    prisma.size.findMany({ select: { name: true } }),
+  ]);
 
-    return true
-  })
-
-  // Sort products
-  filteredProducts.sort((a, b) => {
-    let aValue: string | number | Date
-    let bValue: string | number | Date
-  
-    if (sortField === "createdAt") {
-      aValue = new Date(a.createdAt).getTime()
-      bValue = new Date(b.createdAt).getTime()
-    } else if (sortField === "price") {
-      aValue = a.price
-      bValue = b.price
-    } else if (sortField === "name") {
-      aValue = a.name.toLowerCase()
-      bValue = b.name.toLowerCase()
-    } else if (sortField === "brand") {
-      aValue = a.brand.toLowerCase()
-      bValue = b.brand.toLowerCase()
-    } else {
-      // fallback in case new field gets added later
-      return 0
-    }
-  
-    if (sortDirection === "asc") {
-      return aValue > bValue ? 1 : -1
-    } else {
-      return aValue < bValue ? 1 : -1
-    }
-  })
-
-  // Calculate pagination
-  const total = filteredProducts.length
-  const totalPages = Math.ceil(total / limit)
-  const startIndex = (page - 1) * limit
-  const endIndex = startIndex + limit
-  const paginatedProducts = filteredProducts.slice(startIndex, endIndex)
-
-  // Calculate price range for filters
-  const prices = dummyProducts.map((p) => p.price)
+  const prices = await prisma.product.findMany({ select: { price: true } });
   const priceRange = {
-    min: Math.min(...prices),
-    max: Math.max(...prices),
-  }
+    min: Math.min(...prices.map((p) => p.price)),
+    max: Math.max(...prices.map((p) => p.price)),
+  };
 
   const response: ProductsResponse = {
-    products: paginatedProducts,
+    products,
     total,
     page,
     limit,
-    totalPages,
+    totalPages: Math.ceil(total / limit),
     filters: {
-      categories,
-      subcategories,
-      brands,
+      categories: categories.map((c) => c.name),
+      brands: brands.map((b) => b.name),
+      colors: colors.map((c) => c.name),
+      sizes: sizes.map((s) => s.name),
       priceRange,
-      sizes,
-      colors,
     },
-  }
+  };
 
-  return NextResponse.json(response)
+  return NextResponse.json(response);
 }

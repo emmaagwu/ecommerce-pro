@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Product {
+  id           String      @id @default(cuid())
+  name         String
+  price        Float
+  originalPrice Float?
+  description  String
+  image        String
+  images       String[]
+  inStock      Boolean
+  rating       Float
+  reviewCount  Int
+  createdAt    DateTime    @default(now())
+
+  // Relations
+  category     Category    @relation(fields: [categoryId], references: [id])
+  categoryId   String
+
+  subcategory  Subcategory @relation(fields: [subcategoryId], references: [id])
+  subcategoryId String
+
+  brand        Brand       @relation(fields: [brandId], references: [id])
+  brandId      String
+
+  sizes        Size[]      @relation("ProductSizes")
+  colors       Color[]     @relation("ProductColors")
+  tags         Tag[]       @relation("ProductTags")
+}
+
+model Category {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  subcategories Subcategory[]
+  products    Product[]
+}
+
+model Subcategory {
+  id         String    @id @default(cuid())
+  name       String
+  category   Category  @relation(fields: [categoryId], references: [id])
+  categoryId String
+  products   Product[]
+  
+  @@unique([name, categoryId]) // Ensures no duplicate subcategory for same category
+}
+
+model Brand {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[]
+}
+
+model Size {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[] @relation("ProductSizes")
+}
+
+model Color {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[] @relation("ProductColors")
+}
+
+model Tag {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[] @relation("ProductTags")
+}

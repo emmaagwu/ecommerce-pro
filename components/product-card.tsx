@@ -32,17 +32,19 @@ export function ProductCard({ product }: ProductCardProps) {
     addItem(product, 1)
     setIsOpen(true)
   }
-
+   console.log(product);
   return (
     <Card className="group relative overflow-hidden border-border bg-card hover:shadow-lg transition-all duration-300">
       <Link href={`/products/${product.id}`}>
         <div className="relative aspect-[3/4] overflow-hidden cursor-pointer">
           <Image
-            src={imageError ? "/placeholder.svg?height=400&width=300" : product.image}
-            alt={product.name}
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            onError={() => setImageError(true)}
+             src={imageError ? "/placeholder.svg?height=400&width=300" : product.image}
+             alt={product.name}
+             fill
+             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+             priority
+             className="object-cover transition-transform duration-300 group-hover:scale-105"
+             onError={() => setImageError(true)}
           />
 
           {/* Wishlist button */}

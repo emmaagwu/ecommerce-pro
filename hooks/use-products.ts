@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import type { Product, ProductFilters, ProductSort, ProductsResponse } from "@/lib/types"
 
 interface UseProductsOptions {
+  dataSource?: "prisma" | "sanity" | "dummy"
   initialFilters?: ProductFilters
   initialSort?: ProductSort
   initialPage?: number
@@ -12,6 +13,7 @@ interface UseProductsOptions {
 }
 
 export function useProducts({
+  dataSource = "prisma", // default to Prisma
   initialFilters = {},
   initialSort = { field: "createdAt", direction: "desc" },
   initialPage = 1,
@@ -58,10 +60,14 @@ export function useProducts({
       if (filters.inStock !== undefined) params.append("inStock", filters.inStock.toString())
       if (searchQuery) params.append("search", searchQuery)
 
-      const response = await fetch(`/api/products?${params}`)
-      if (!response.ok) {
-        throw new Error("Failed to fetch products")
-      }
+      // Pick API route based on dataSource
+      let route = "/api/products"
+      if (dataSource === "prisma") route = "/api/products"
+      if (dataSource === "sanity") route = "/api/products/sanity"
+      if (dataSource === "dummy") route = "/api/products/dummy"
+
+      const response = await fetch(`${route}?${params}`)
+      if (!response.ok) throw new Error("Failed to fetch products")
 
       const data: ProductsResponse = await response.json()
       setProducts(data.products)
