@@ -74,3 +74,8 @@
 // }
 
 
+export async function GET() {
+  return new Response("Sanity API is disabled for now", { status: 410 }); // 410 Gone
+}
+
+
