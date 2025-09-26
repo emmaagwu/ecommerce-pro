@@ -30,44 +30,47 @@
 // }
 
 
+// FOR SANITY
 
-import { type NextRequest, NextResponse } from "next/server"
-import { sanityClient } from "@/sanity/client"
-import { groq } from "next-sanity"
-import type { Product } from "@/lib/types"
 
-export async function GET(
-  request: NextRequest,
-  { params }: {params: Promise<{ id: string }> } // this comes from the route, e.g., /api/products/[id]
-) {
-  const { id } = await params
 
-  // GROQ query for a single product
-  const query = groq`
-    *[_type == "product" && _id == $id][0] {
-      "id": _id,
-      name,
-      "slug": slug.current,
-      price,
-      inStock,
-      "category": category->name,
-      "brand": brand->name,
-      "colors": colors[]->name,
-      "sizes": sizes[]->name,
-      "image": mainImage.asset->url,
-      "images": images[].asset->url,
-      description,
-      createdAt
-    }
-  `
+// import { type NextRequest, NextResponse } from "next/server"
+// import { sanityClient } from "@/sanity/client"
+// import { groq } from "next-sanity"
+// import type { Product } from "@/lib/types"
 
-  const product: Product | null = await sanityClient.fetch(query, { id })
+// export async function GET(
+//   request: NextRequest,
+//   { params }: {params: Promise<{ id: string }> } 
+// ) {
+//   const { id } = await params
 
-  if (!product) {
-    return NextResponse.json({ error: "Product not found" }, { status: 404 })
-  }
+//   // GROQ query for a single product
+//   const query = groq`
+//     *[_type == "product" && _id == $id][0] {
+//       "id": _id,
+//       name,
+//       "slug": slug.current,
+//       price,
+//       inStock,
+//       "category": category->name,
+//       "brand": brand->name,
+//       "colors": colors[]->name,
+//       "sizes": sizes[]->name,
+//       "image": mainImage.asset->url,
+//       "images": images[].asset->url,
+//       description,
+//       createdAt
+//     }
+//   `
 
-  return NextResponse.json(product)
-}
+//   const product: Product | null = await sanityClient.fetch(query, { id })
+
+//   if (!product) {
+//     return NextResponse.json({ error: "Product not found" }, { status: 404 })
+//   }
+
+//   return NextResponse.json(product)
+// }
 
 

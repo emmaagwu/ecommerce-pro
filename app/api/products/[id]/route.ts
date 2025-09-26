@@ -1,25 +1,23 @@
 // app/api/products/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
-    const productId = params.id;
+    const { id } = context.params;
 
-    // Validate ID format (assuming UUID or similar)
-    if (!productId || productId.trim() === "") {
+    if (!id || id.trim() === "") {
       return NextResponse.json(
         { error: "Product ID is required" },
         { status: 400 }
       );
     }
 
-    // Fetch the product with all relations
     const productRaw = await prisma.product.findUnique({
-      where: { id: productId },
+      where: { id },
       include: {
         category: true,
         subcategory: true,
@@ -37,7 +35,6 @@ export async function GET(
       );
     }
 
-    // Normalize to Product interface (matching your existing structure)
     const product = {
       id: productRaw.id,
       name: productRaw.name,
