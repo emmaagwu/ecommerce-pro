@@ -1,10 +1,11 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+// import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2, Pencil } from "lucide-react";
 import { format } from "date-fns";
+import Image from "next/image";
 
 export default function ProductTable({
   products,
@@ -71,7 +72,7 @@ export default function ProductTable({
               <TableRow key={product.id}>
                 <TableCell>
                   {product.image || product.images?.[0] ? (
-                    <img
+                    <Image
                       src={product.image || product.images[0]}
                       alt={product.name}
                       className="w-14 h-14 object-cover rounded border"
