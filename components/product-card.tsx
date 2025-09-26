@@ -106,49 +106,51 @@ export function ProductCard({ product }: ProductCardProps) {
             )}
           </div>
 
-          {/* Colors */}
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground">Colors:</span>
-            <div className="flex gap-1">
-              {product.colors.slice(0, 3).map((color, index) => (
-                <div
-                  key={index}
-                  className="h-3 w-3 rounded-full border border-border"
-                  style={{
-                    backgroundColor:
-                      color.toLowerCase() === "white"
-                        ? "#ffffff"
-                        : color.toLowerCase() === "black"
-                          ? "#000000"
-                          : color.toLowerCase() === "navy"
-                            ? "#1e3a8a"
-                            : color.toLowerCase() === "gray"
-                              ? "#6b7280"
-                              : color.toLowerCase() === "red"
-                                ? "#dc2626"
-                                : color.toLowerCase() === "blue"
-                                  ? "#2563eb"
-                                  : color.toLowerCase().includes("blue")
-                                    ? "#3b82f6"
-                                    : color.toLowerCase().includes("pink")
-                                      ? "#ec4899"
-                                      : color.toLowerCase().includes("yellow")
-                                        ? "#eab308"
-                                        : color.toLowerCase() === "brown"
-                                          ? "#92400e"
-                                          : color.toLowerCase() === "cream"
-                                            ? "#fef3c7"
-                                            : color.toLowerCase() === "burgundy"
-                                              ? "#7c2d12"
-                                              : "#9ca3af",
-                  }}
-                />
-              ))}
-              {product.colors.length > 3 && (
-                <span className="text-xs text-muted-foreground">+{product.colors.length - 3}</span>
-              )}
+          {/* Colors - Fixed null safety */}
+          {product.colors && product.colors.length > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Colors:</span>
+              <div className="flex gap-1">
+                {product.colors.slice(0, 3).map((color, index) => (
+                  <div
+                    key={index}
+                    className="h-3 w-3 rounded-full border border-border"
+                    style={{
+                      backgroundColor:
+                        color.toLowerCase() === "white"
+                          ? "#ffffff"
+                          : color.toLowerCase() === "black"
+                            ? "#000000"
+                            : color.toLowerCase() === "navy"
+                              ? "#1e3a8a"
+                              : color.toLowerCase() === "gray"
+                                ? "#6b7280"
+                                : color.toLowerCase() === "red"
+                                  ? "#dc2626"
+                                  : color.toLowerCase() === "blue"
+                                    ? "#2563eb"
+                                    : color.toLowerCase().includes("blue")
+                                      ? "#3b82f6"
+                                      : color.toLowerCase().includes("pink")
+                                        ? "#ec4899"
+                                        : color.toLowerCase().includes("yellow")
+                                          ? "#eab308"
+                                          : color.toLowerCase() === "brown"
+                                            ? "#92400e"
+                                            : color.toLowerCase() === "cream"
+                                              ? "#fef3c7"
+                                              : color.toLowerCase() === "burgundy"
+                                                ? "#7c2d12"
+                                                : "#9ca3af",
+                    }}
+                  />
+                ))}
+                {product.colors.length > 3 && (
+                  <span className="text-xs text-muted-foreground">+{product.colors.length - 3}</span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Add to cart button */}
