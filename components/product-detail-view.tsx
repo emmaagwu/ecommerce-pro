@@ -131,7 +131,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                     key={i}
                     className={cn(
                       "h-4 w-4",
-                      i < Math.floor(product.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300",
+                      i < Math.floor(product.rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300",
                     )}
                   />
                 ))}
