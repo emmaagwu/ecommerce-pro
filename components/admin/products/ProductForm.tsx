@@ -82,12 +82,14 @@ export default function ProductForm() {
   // const watchCategory = watch("category");
   const watchMainImage = watch("image");
   const watchAdditionalImages = watch("images");
+  // ✅ Get base URL from env
+  const baseRoute = process.env.NEXT_PUBLIC_API_BASE_URL
 
   // Fetch filter options from backend
   useEffect(() => {
     async function fetchFilters() {
       try {
-        const res = await fetch("/api/admin/filters");
+        const res = await fetch(`${baseRoute}/api/filters`);
         const data = await res.json();
         setFilters(data);
       } catch (err) {
@@ -154,7 +156,7 @@ export default function ProductForm() {
         originalPrice: data.originalPrice ? parseFloat(String(data.originalPrice)) : undefined,
       };
 
-      const res = await fetch("/api/admin/products", {
+      const res = await fetch(`{baseRoute}/api/products`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
