@@ -89,7 +89,7 @@ export default function ProductForm() {
   useEffect(() => {
     async function fetchFilters() {
       try {
-        const res = await fetch(`${baseRoute}/api/filters`);
+        const res = await fetch(`${baseRoute}/api/filters/`);
         const data = await res.json();
         setFilters(data);
       } catch (err) {
@@ -156,7 +156,7 @@ export default function ProductForm() {
         originalPrice: data.originalPrice ? parseFloat(String(data.originalPrice)) : undefined,
       };
 
-      const res = await fetch(`${baseRoute}/api/products`, {
+      const res = await fetch(`${baseRoute}/api/products/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
