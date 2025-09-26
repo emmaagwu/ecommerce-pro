@@ -20,6 +20,12 @@ const eslintConfig = [
       "next-env.d.ts",
       "app/generated/prisma/**", // 👈 ignore Prisma client output
     ],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { "argsIgnorePattern": "^_" }
+      ]
+    }
   },
 ];
 

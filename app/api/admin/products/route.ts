@@ -2,14 +2,24 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 
+const allowedSortFields = ["createdAt", "name", "price", "rating", "brand"] as const;
+const allowedSortDirections = ["desc", "asc"] as const;
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
   const page = Number(searchParams.get("page") || "1");
   const limit = Number(searchParams.get("limit") || "12");
-  const sortField = (searchParams.get("sortField") as any) || "createdAt";
-  const sortDirection = (searchParams.get("sortDirection") as any) || "desc";
+
+  let sortField = searchParams.get("sortField") || "createdAt";
+  let sortDirection = searchParams.get("sortDirection") || "desc";
+
+  if (!allowedSortFields.includes(sortField as typeof allowedSortFields[number])) {
+    sortField = "createdAt";
+  }
+  if (!allowedSortDirections.includes(sortDirection as typeof allowedSortDirections[number])) {
+    sortDirection = "desc";
+  }
 
   const filters = {
     category: searchParams.get("category") || undefined,
@@ -29,7 +39,10 @@ export async function GET(req: Request) {
   const response = await getProducts({
     page,
     limit,
-    sort: { field: sortField, direction: sortDirection },
+    sort: { 
+      field: sortField as typeof allowedSortFields[number],
+      direction: sortDirection as typeof allowedSortDirections[number],
+    },
     filters,
     search,
   });
