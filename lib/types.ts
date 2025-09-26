@@ -7,11 +7,11 @@ export interface Product {
   inStock: boolean
   createdAt: string
 
-  // Optional
+  // Optional - but match Prisma's null types
   originalPrice?: number
   images?: string[]
-  rating?: number
-  reviewCount?: number
+  rating?: number | null     
+  reviewCount?: number | null 
   category?: string
   subcategory?: string
   brand?: string

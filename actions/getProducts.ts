@@ -93,9 +93,9 @@ export async function getProducts({
     inStock: p.inStock,
     rating: p.rating,
     reviewCount: p.reviewCount,
-    category: p.category.name,
+    category: p.category?.name || "Uncategorized",  // Handle null category
     subcategory: p.subcategory?.name,
-    brand: p.brand.name,
+    brand: p.brand?.name || "No Brand",  // Handle null brand
     sizes: p.sizes.map((s) => s.name),
     colors: p.colors.map((c) => c.name),
     tags: p.tags.map((t) => t.name),
