@@ -1,0 +1,28 @@
+import { NextResponse } from "next/server";
+import prisma from '@/lib/prisma';
+
+
+export async function GET() {
+  try {
+    const sizes = await prisma.size.findMany({ orderBy: { name: "asc" } });
+    return NextResponse.json(sizes);
+  } catch (err) {
+    return NextResponse.json({ error: "Failed to fetch sizes" }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const { name } = await req.json();
+
+    if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
+
+    const size = await prisma.size.create({ data: { name } });
+    return NextResponse.json(size, { status: 201 });
+  } catch (err: any) {
+    if (err.code === "P2002") {
+      return NextResponse.json({ error: "Size already exists" }, { status: 409 });
+    }
+    return NextResponse.json({ error: "Failed to create size" }, { status: 500 });
+  }
+}

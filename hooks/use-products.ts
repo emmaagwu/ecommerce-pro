@@ -62,7 +62,8 @@ export function useProducts({
 
       // Pick API route based on dataSource
       let route = "/api/products"
-      if (dataSource === "prisma") route = "/api/products"
+      if (dataSource === "prisma") route = "https://ecommerce-api-gf3g.onrender.com/api/products/"
+      // if (dataSource === "prisma") route = "/api/products"
       if (dataSource === "sanity") route = "/api/products/sanity"
       if (dataSource === "dummy") route = "/api/products/dummy"
 
@@ -70,6 +71,7 @@ export function useProducts({
       if (!response.ok) throw new Error("Failed to fetch products")
 
       const data: ProductsResponse = await response.json()
+      console.log(data);   
       setProducts(data.products)
       setTotalProducts(data.total)
       setTotalPages(data.totalPages)

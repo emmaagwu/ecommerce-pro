@@ -125,7 +125,7 @@ export function FilterSidebar({
             <div className="space-y-3">
               <Label className="text-sm font-medium">Subcategory</Label>
               <div className="space-y-2">
-                {availableFilters.subcategories.map((subcategory) => (
+                {availableFilters.subcategories?.map((subcategory) => (
                   <div key={subcategory} className="flex items-center space-x-2">
                     <Checkbox
                       id={`subcategory-${subcategory}`}

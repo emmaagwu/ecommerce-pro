@@ -49,12 +49,15 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // ✅ Get base URL from env
+  const baseRoute = process.env.NEXT_PUBLIC_API_BASE_URL
+
   useEffect(() => {
-    fetch(`/api/products/${id}`)
+    fetch(`${baseRoute}/api/products/${id}`)
       .then(res => res.json())
       .then(data => setProduct(data))
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, baseRoute])
 
   if (loading) return <div>Loading...</div>
   if (!product) return <div>Product not found</div>
@@ -66,3 +69,4 @@ export default function ProductPage({ params }: ProductPageProps) {
     </div>
   )
 }
+

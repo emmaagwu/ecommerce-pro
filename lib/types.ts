@@ -2,20 +2,22 @@ export interface Product {
   id: string
   name: string
   price: number
-  originalPrice?: number
-  category: string
-  subcategory?: string
-  image: string
-  images?: string[]
   description: string
-  sizes: string[]
-  colors: string[]
+  image: string
   inStock: boolean
-  rating: number
-  reviewCount: number
-  tags: string[]
-  brand: string
   createdAt: string
+
+  // Optional
+  originalPrice?: number
+  images?: string[]
+  rating?: number
+  reviewCount?: number
+  category?: string
+  subcategory?: string
+  brand?: string
+  sizes?: string[]
+  colors?: string[]
+  tags?: string[]
 }
 
 export interface ProductFilters {

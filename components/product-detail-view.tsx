@@ -33,6 +33,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
     addItem(product, quantity, selectedSize, selectedColor)
     setIsOpen(true)
   }
+  console.log("Rendering ProductDetailView for product:", product)
 
   return (
     <div className="container mx-auto px-4 py-8">
