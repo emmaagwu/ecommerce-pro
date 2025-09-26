@@ -1,6 +1,5 @@
 // app/api/uploadthing/core.ts
 import { createUploadthing, type FileRouter } from "uploadthing/next";
-import { UploadThingError } from "uploadthing/server";
 
 const f = createUploadthing();
 
@@ -16,6 +15,7 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ metadata, file }) => {
       console.log("Main image upload complete");
       console.log("file url", file.url);
+      console.log("metadata", metadata);
       return { url: file.url };
     }),
 
@@ -29,6 +29,7 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ metadata, file }) => {
       console.log("Additional images upload complete");
       console.log("file url", file.url);
+      console.log("metadata", metadata);
       return { url: file.url };
     }),
 } satisfies FileRouter;

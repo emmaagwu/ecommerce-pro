@@ -2,11 +2,12 @@
 import { useEffect, useState, useCallback } from "react";
 import ProductFilters from "@/components/admin/products/ProductFilters";
 import ProductTable from "@/components/admin/products/ProductTable";
+import type { Product } from "@/lib/types";
 
 const PAGE_LIMIT = 12;
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [filtersMeta, setFiltersMeta] = useState<{ categories: string[], brands: string[] }>({ categories: [], brands: [] });
   const [loading, setLoading] = useState(true);

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from '@/lib/prisma';
 
-
 export async function GET() {
   try {
     const subcategories = await prisma.subcategory.findMany({
@@ -9,7 +8,7 @@ export async function GET() {
       orderBy: { name: "asc" },
     });
     return NextResponse.json(subcategories);
-  } catch (err) {
+  } catch (_) {
     return NextResponse.json({ error: "Failed to fetch subcategories" }, { status: 500 });
   }
 }
@@ -25,8 +24,8 @@ export async function POST(req: Request) {
       data: { name, categoryId },
     });
     return NextResponse.json(subcategory, { status: 201 });
-  } catch (err: any) {
-    if (err.code === "P2002") {
+  } catch (err) {
+    if ((err as { code?: string }).code === "P2002") {
       return NextResponse.json({ error: "Subcategory already exists for this category" }, { status: 409 });
     }
     return NextResponse.json({ error: "Failed to create subcategory" }, { status: 500 });

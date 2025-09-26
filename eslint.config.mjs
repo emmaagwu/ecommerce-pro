@@ -18,6 +18,7 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "app/generated/prisma/**", // 👈 ignore Prisma client output
     ],
   },
 ];
