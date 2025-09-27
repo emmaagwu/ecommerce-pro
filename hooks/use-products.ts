@@ -282,3 +282,22 @@ export function useProducts({
     refetch,
   }
 }
+
+/**
+ * Delete a product by its id.
+ * @param productId - The product id to delete.
+ */
+export async function deleteProduct(productId: string) {
+  // IMPORTANT: Use the correct API base route. If you use relative, it will proxy via Next.js.
+  const res = await fetch(`/api/products?id=${productId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    let msg = "Failed to delete product";
+    try {
+      const data = await res.json();
+      msg = data.message || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+}

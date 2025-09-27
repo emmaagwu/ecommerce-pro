@@ -125,7 +125,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
     async function fetchData() {
       try {
         setLoading(true);
-        
+
         // Fetch filters
         const filtersRes = await fetch(`${baseRoute}/api/filters/`);
         const filtersData = await filtersRes.json();
@@ -135,7 +135,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
         if (isEditMode) {
           const productRes = await fetch(`${baseRoute}/api/products/${productId}/`);
           const productData = await productRes.json();
-          
+
           // Populate form with existing data
           reset({
             name: productData.name,
@@ -161,6 +161,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
       }
     }
     fetchData();
+    // eslint-disable-next-line
   }, [productId, isEditMode, baseRoute, reset]);
 
   // Filter subcategories based on selected category
@@ -172,44 +173,72 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
     setShowNewInputs(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
+  // --- INSTANT FILTER ADDITION ---
   const addNewFilter = (field: keyof typeof newInputs) => {
     const value = newInputs[field].trim();
     if (!value) return;
 
+    // Update filters state immediately so new value appears for selection
+    setFilters(prevFilters => {
+      let updated = { ...prevFilters };
+      switch (field) {
+        case 'category':
+          if (!prevFilters.categories.find(c => c.name === value)) {
+            updated.categories = [...prevFilters.categories, { id: `new-${Date.now()}`, name: value }];
+          }
+          break;
+        case 'subcategory':
+          if (!prevFilters.subcategories.find(s => s.name === value)) {
+            updated.subcategories = [
+              ...prevFilters.subcategories,
+              { id: `new-${Date.now()}`, name: value, category: getValues('category') }
+            ];
+          }
+          break;
+        case 'brand':
+          if (!prevFilters.brands.find(b => b.name === value)) {
+            updated.brands = [...prevFilters.brands, { id: `new-${Date.now()}`, name: value }];
+          }
+          break;
+        case 'color':
+          if (!prevFilters.colors.find(c => c.name === value)) {
+            updated.colors = [...prevFilters.colors, { id: `new-${Date.now()}`, name: value }];
+          }
+          break;
+        case 'size':
+          if (!prevFilters.sizes.find(s => s.name === value)) {
+            updated.sizes = [...prevFilters.sizes, { id: `new-${Date.now()}`, name: value }];
+          }
+          break;
+        case 'tag':
+          if (!prevFilters.tags.find(t => t.name === value)) {
+            updated.tags = [...prevFilters.tags, { id: `new-${Date.now()}`, name: value }];
+          }
+          break;
+      }
+      return updated;
+    });
+
+    // Set the value in the form
     switch (field) {
-      case 'category':
-        if (!filters.categories.find(c => c.name === value)) {
-          setValue('category', value);
-        }
-        break;
-      case 'subcategory':
-        if (!filters.subcategories.find(s => s.name === value)) {
-          setValue('subcategory', value);
-        }
-        break;
-      case 'brand':
-        if (!filters.brands.find(b => b.name === value)) {
-          setValue('brand', value);
-        }
-        break;
-      case 'color':
+      case 'category': setValue('category', value); break;
+      case 'subcategory': setValue('subcategory', value); break;
+      case 'brand': setValue('brand', value); break;
+      case 'color': {
         const currentColors = getValues('colors');
-        if (!currentColors.includes(value)) {
-          setValue('colors', [...currentColors, value]);
-        }
+        if (!currentColors.includes(value)) setValue('colors', [...currentColors, value]);
         break;
-      case 'size':
+      }
+      case 'size': {
         const currentSizes = getValues('sizes');
-        if (!currentSizes.includes(value)) {
-          setValue('sizes', [...currentSizes, value]);
-        }
+        if (!currentSizes.includes(value)) setValue('sizes', [...currentSizes, value]);
         break;
-      case 'tag':
+      }
+      case 'tag': {
         const currentTags = getValues('tags');
-        if (!currentTags.includes(value)) {
-          setValue('tags', [...currentTags, value]);
-        }
+        if (!currentTags.includes(value)) setValue('tags', [...currentTags, value]);
         break;
+      }
     }
 
     setNewInputs(prev => ({ ...prev, [field]: "" }));
@@ -298,7 +327,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
       const url = isEditMode 
         ? `${baseRoute}/api/products/${productId}/`
         : `${baseRoute}/api/products/`;
-      
+
       const method = isEditMode ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -334,7 +363,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 space-y-6">
+    <form className="w-full max-w-2xl mx-auto p-4 space-y-6" onSubmit={handleSubmit(onSubmit)}>
       {/* Basic Product Info */}
       <div className="space-y-4">
         <div>
@@ -418,7 +447,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                     placeholder="New category name"
                     value={newInputs.category}
                     onChange={(e) => setNewInputs(prev => ({ ...prev, category: e.target.value }))}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('category'))}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('category'))}
                   />
                   <Button type="button" onClick={() => addNewFilter('category')}>
                     Add
@@ -466,7 +495,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                     placeholder="New subcategory name"
                     value={newInputs.subcategory}
                     onChange={(e) => setNewInputs(prev => ({ ...prev, subcategory: e.target.value }))}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('subcategory'))}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('subcategory'))}
                   />
                   <Button type="button" onClick={() => addNewFilter('subcategory')}>
                     Add
@@ -514,7 +543,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                     placeholder="New brand name"
                     value={newInputs.brand}
                     onChange={(e) => setNewInputs(prev => ({ ...prev, brand: e.target.value }))}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('brand'))}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('brand'))}
                   />
                   <Button type="button" onClick={() => addNewFilter('brand')}>
                     Add
@@ -552,7 +581,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                 placeholder={`New ${name.slice(0, -1)} name`}
                 value={newInputs[name as keyof typeof newInputs]}
                 onChange={(e) => setNewInputs(prev => ({ ...prev, [name]: e.target.value }))}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter(name as keyof typeof newInputs))}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter(name as keyof typeof newInputs))}
                 className="text-sm"
               />
               <Button 
@@ -713,7 +742,6 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
         type="submit" 
         className="w-full mt-6" 
         disabled={submitting || isUploading}
-        onClick={handleSubmit(onSubmit)}
       >
         {submitting 
           ? `${isEditMode ? 'Updating' : 'Creating'} Product...`
@@ -722,6 +750,6 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
           : `${isEditMode ? 'Update' : 'Create'} Product`
         }
       </Button>
-    </div>
+    </form>
   );
 }
