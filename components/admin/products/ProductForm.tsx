@@ -120,7 +120,6 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
   const watchAdditionalImages = watch("images");
   const baseRoute = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  // Fetch filter options and product data (if editing)
   useEffect(() => {
     async function fetchData() {
       try {
@@ -136,7 +135,6 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
           const productRes = await fetch(`${baseRoute}/api/products/${productId}/`);
           const productData = await productRes.json();
 
-          // Populate form with existing data
           reset({
             name: productData.name,
             price: productData.price,
@@ -178,7 +176,6 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
     const value = newInputs[field].trim();
     if (!value) return;
 
-    // Update filters state immediately so new value appears for selection
     setFilters(prevFilters => {
       let updated = { ...prevFilters };
       switch (field) {
@@ -219,7 +216,6 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
       return updated;
     });
 
-    // Set the value in the form
     switch (field) {
       case 'category': setValue('category', value); break;
       case 'subcategory': setValue('subcategory', value); break;
@@ -263,7 +259,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
 
     setSubmitting(true);
     try {
-      // Determine which fields to send based on what exists in our filters
+      // PATCH: Only use IDs that are not "new-" (local UI only!), else send as name
       const payload: any = {
         name: data.name,
         price: parseFloat(String(data.price)),
@@ -274,44 +270,41 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
         inStock: data.inStock,
       };
 
-      // Handle category - use ID if exists, otherwise use name for upsert
+      // Category
       const existingCategory = filters.categories.find(c => c.name === data.category);
-      if (existingCategory) {
+      if (existingCategory && !existingCategory.id.startsWith("new-")) {
         payload.category_id = existingCategory.id;
       } else if (data.category) {
         payload.category_name = data.category;
       }
 
-      // Handle subcategory
+      // Subcategory
       const existingSubcategory = filters.subcategories.find(s => s.name === data.subcategory);
-      if (existingSubcategory) {
+      if (existingSubcategory && !existingSubcategory.id.startsWith("new-")) {
         payload.subcategory_id = existingSubcategory.id;
       } else if (data.subcategory) {
         payload.subcategory_name = data.subcategory;
       }
 
-      // Handle brand
+      // Brand
       const existingBrand = filters.brands.find(b => b.name === data.brand);
-      if (existingBrand) {
+      if (existingBrand && !existingBrand.id.startsWith("new-")) {
         payload.brand_id = existingBrand.id;
       } else if (data.brand) {
         payload.brand_name = data.brand;
       }
 
-      // Handle many-to-many fields (supports all 4 scenarios)
       const handleManyToMany = (values: string[], filterList: FilterItem[], fieldName: string) => {
         const existingIds: string[] = [];
         const newNames: string[] = [];
-
         values.forEach(value => {
           const existing = filterList.find(item => item.name === value);
-          if (existing) {
+          if (existing && !existing.id.startsWith("new-")) {
             existingIds.push(existing.id);
           } else {
             newNames.push(value);
           }
         });
-
         if (existingIds.length > 0) {
           payload[`${fieldName}_ids`] = existingIds;
         }
@@ -324,10 +317,9 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
       handleManyToMany(data.sizes, filters.sizes, 'size');
       handleManyToMany(data.tags, filters.tags, 'tag');
 
-      const url = isEditMode 
+      const url = isEditMode
         ? `${baseRoute}/api/products/${productId}/`
         : `${baseRoute}/api/products/`;
-
       const method = isEditMode ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -363,19 +355,48 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
   }
 
   return (
-    <form className="w-full max-w-2xl mx-auto p-4 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-      {/* Basic Product Info */}
-      <div className="space-y-4">
+    <form
+      className="w-full max-w-2xl mx-auto p-4 md:p-8 space-y-8 bg-white rounded-xl shadow border border-gray-100"
+      onSubmit={handleSubmit(onSubmit)}
+      autoComplete="off"
+    >
+      {/* Product Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
         <div>
+          <h2 className="text-xl md:text-2xl font-bold text-primary mb-1">
+            {isEditMode ? "Edit Product" : "Add New Product"}
+          </h2>
+          <p className="text-gray-500 text-sm">
+            {isEditMode
+              ? "Update the details below to edit this product."
+              : "Fill all required fields to create a new product."}
+          </p>
+        </div>
+        <div className="flex items-center gap-3 mt-2 md:mt-0">
+          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+            {isEditMode ? "EDIT MODE" : "CREATE MODE"}
+          </span>
+          {submitting || isUploading ? (
+            <span className="inline-flex items-center gap-2 text-xs text-gray-500">
+              <span className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent" />{" "}
+              {submitting ? "Saving..." : "Uploading..."}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Basic Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
           <Label className="text-sm font-medium">Name *</Label>
-          <Input 
-            {...register("name", { required: true })} 
+          <Input
+            {...register("name", { required: true })}
             placeholder="Product Name"
             className="mt-1"
+            autoFocus
           />
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <Label className="text-sm font-medium">Price *</Label>
             <Input
@@ -400,240 +421,248 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
             />
           </div>
         </div>
+      </div>
 
+      <div>
+        <Label className="text-sm font-medium">Description *</Label>
+        <Textarea
+          {...register("description", { required: true })}
+          rows={3}
+          className="mt-1"
+          placeholder="Enter a detailed product description"
+        />
+      </div>
+
+      {/* Category/Brand */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Category */}
         <div>
-          <Label className="text-sm font-medium">Description *</Label>
-          <Textarea 
-            {...register("description", { required: true })} 
-            rows={3}
-            className="mt-1"
-          />
-        </div>
-      </div>
-
-      {/* Category Selection */}
-      <div>
-        <Label className="text-sm font-medium">Category</Label>
-        <Controller
-          control={control}
-          name="category"
-          render={({ field }) => (
-            <div className="mt-1 space-y-2">
-              <div className="flex gap-2">
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select or add category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filters.categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.name}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => toggleNewInput('category')}
-                >
-                  <Plus size={16} />
-                </Button>
-              </div>
-              {showNewInputs.category && (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="New category name"
-                    value={newInputs.category}
-                    onChange={(e) => setNewInputs(prev => ({ ...prev, category: e.target.value }))}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('category'))}
-                  />
-                  <Button type="button" onClick={() => addNewFilter('category')}>
-                    Add
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        />
-      </div>
-
-      {/* Subcategory Selection */}
-      <div>
-        <Label className="text-sm font-medium">Subcategory</Label>
-        <Controller
-          control={control}
-          name="subcategory"
-          render={({ field }) => (
-            <div className="mt-1 space-y-2">
-              <div className="flex gap-2">
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select or add subcategory" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableSubcategories.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.name}>
-                        {sub.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => toggleNewInput('subcategory')}
-                >
-                  <Plus size={16} />
-                </Button>
-              </div>
-              {showNewInputs.subcategory && (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="New subcategory name"
-                    value={newInputs.subcategory}
-                    onChange={(e) => setNewInputs(prev => ({ ...prev, subcategory: e.target.value }))}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('subcategory'))}
-                  />
-                  <Button type="button" onClick={() => addNewFilter('subcategory')}>
-                    Add
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        />
-      </div>
-
-      {/* Brand Selection */}
-      <div>
-        <Label className="text-sm font-medium">Brand</Label>
-        <Controller
-          control={control}
-          name="brand"
-          render={({ field }) => (
-            <div className="mt-1 space-y-2">
-              <div className="flex gap-2">
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select or add brand" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filters.brands.map((brand) => (
-                      <SelectItem key={brand.id} value={brand.name}>
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => toggleNewInput('brand')}
-                >
-                  <Plus size={16} />
-                </Button>
-              </div>
-              {showNewInputs.brand && (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="New brand name"
-                    value={newInputs.brand}
-                    onChange={(e) => setNewInputs(prev => ({ ...prev, brand: e.target.value }))}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('brand'))}
-                  />
-                  <Button type="button" onClick={() => addNewFilter('brand')}>
-                    Add
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        />
-      </div>
-
-      {/* Multi-select sections */}
-      {[
-        { name: 'sizes', label: 'Sizes', data: filters.sizes },
-        { name: 'colors', label: 'Colors', data: filters.colors },
-        { name: 'tags', label: 'Tags', data: filters.tags }
-      ].map(({ name, label, data }) => (
-        <div key={name}>
-          <div className="flex items-center justify-between mb-2">
-            <Label className="text-sm font-medium">{label}</Label>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm"
-              onClick={() => toggleNewInput(name as keyof typeof showNewInputs)}
-            >
-              <Plus size={14} className="mr-1" />
-              Add New
-            </Button>
-          </div>
-          
-          {showNewInputs[name as keyof typeof showNewInputs] && (
-            <div className="flex gap-2 mb-3">
-              <Input
-                placeholder={`New ${name.slice(0, -1)} name`}
-                value={newInputs[name as keyof typeof newInputs]}
-                onChange={(e) => setNewInputs(prev => ({ ...prev, [name]: e.target.value }))}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter(name as keyof typeof newInputs))}
-                className="text-sm"
-              />
-              <Button 
-                type="button" 
-                size="sm"
-                onClick={() => addNewFilter(name as keyof typeof newInputs)}
-              >
-                Add
-              </Button>
-            </div>
-          )}
-          
+          <Label className="text-sm font-medium">Category</Label>
           <Controller
             control={control}
-            name={name as keyof ProductFormValues}
+            name="category"
             render={({ field }) => (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {data.map((item) => (
-                  <label key={item.id} className="flex items-center gap-2 p-2 border rounded text-sm hover:bg-gray-50 cursor-pointer">
-                    <Checkbox
-                      checked={Array.isArray(field.value) && field.value.includes(item.name)}
-                      onCheckedChange={(checked) => {
-                        const currentValue = Array.isArray(field.value) ? field.value : [];
-                        if (checked) {
-                          field.onChange([...currentValue, item.name]);
-                        } else {
-                          field.onChange(currentValue.filter((v) => v !== item.name));
-                        }
-                      }}
+              <div className="mt-1 space-y-2">
+                <div className="flex gap-2">
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select or add category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filters.categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.name}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => toggleNewInput('category')}
+                    className="border hover:bg-blue-50"
+                  >
+                    <Plus size={16} />
+                  </Button>
+                </div>
+                {showNewInputs.category && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="New category name"
+                      value={newInputs.category}
+                      onChange={(e) => setNewInputs(prev => ({ ...prev, category: e.target.value }))}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('category'))}
                     />
-                    <span className="truncate">{item.name}</span>
-                  </label>
-                ))}
+                    <Button type="button" onClick={() => addNewFilter('category')}>
+                      Add
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           />
         </div>
-      ))}
 
-      {/* Image Uploads */}
-      <div className="space-y-4">
+        {/* Subcategory */}
+        <div>
+          <Label className="text-sm font-medium">Subcategory</Label>
+          <Controller
+            control={control}
+            name="subcategory"
+            render={({ field }) => (
+              <div className="mt-1 space-y-2">
+                <div className="flex gap-2">
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select or add subcategory" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSubcategories.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.name}>
+                          {sub.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => toggleNewInput('subcategory')}
+                    className="border hover:bg-blue-50"
+                  >
+                    <Plus size={16} />
+                  </Button>
+                </div>
+                {showNewInputs.subcategory && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="New subcategory name"
+                      value={newInputs.subcategory}
+                      onChange={(e) => setNewInputs(prev => ({ ...prev, subcategory: e.target.value }))}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('subcategory'))}
+                    />
+                    <Button type="button" onClick={() => addNewFilter('subcategory')}>
+                      Add
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          />
+        </div>
+
+        {/* Brand */}
+        <div>
+          <Label className="text-sm font-medium">Brand</Label>
+          <Controller
+            control={control}
+            name="brand"
+            render={({ field }) => (
+              <div className="mt-1 space-y-2">
+                <div className="flex gap-2">
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select or add brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filters.brands.map((brand) => (
+                        <SelectItem key={brand.id} value={brand.name}>
+                          {brand.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => toggleNewInput('brand')}
+                    className="border hover:bg-blue-50"
+                  >
+                    <Plus size={16} />
+                  </Button>
+                </div>
+                {showNewInputs.brand && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="New brand name"
+                      value={newInputs.brand}
+                      onChange={(e) => setNewInputs(prev => ({ ...prev, brand: e.target.value }))}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('brand'))}
+                    />
+                    <Button type="button" onClick={() => addNewFilter('brand')}>
+                      Add
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          />
+        </div>
+      </div>
+
+      {/* Multi-selects for sizes, colors, tags */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { name: 'sizes', label: 'Sizes', data: filters.sizes },
+          { name: 'colors', label: 'Colors', data: filters.colors },
+          { name: 'tags', label: 'Tags', data: filters.tags }
+        ].map(({ name, label, data }) => (
+          <div key={name} className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-medium">{label}</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="border hover:bg-blue-50"
+                onClick={() => toggleNewInput(name as keyof typeof showNewInputs)}
+              >
+                <Plus size={14} className="mr-1" />
+                Add New
+              </Button>
+            </div>
+            {showNewInputs[name as keyof typeof showNewInputs] && (
+              <div className="flex gap-2 mb-3">
+                <Input
+                  placeholder={`New ${name.slice(0, -1)} name`}
+                  value={newInputs[name as keyof typeof newInputs]}
+                  onChange={(e) => setNewInputs(prev => ({ ...prev, [name]: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter(name as keyof typeof newInputs))}
+                  className="text-sm"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => addNewFilter(name as keyof typeof newInputs)}
+                >
+                  Add
+                </Button>
+              </div>
+            )}
+            <Controller
+              control={control}
+              name={name as keyof ProductFormValues}
+              render={({ field }) => (
+                <div className="flex flex-wrap gap-2">
+                  {data.map((item) => (
+                    <label key={item.id} className="flex items-center gap-2 px-2 py-1 border rounded text-sm hover:bg-gray-50 cursor-pointer">
+                      <Checkbox
+                        checked={Array.isArray(field.value) && field.value.includes(item.name)}
+                        onCheckedChange={(checked) => {
+                          const currentValue = Array.isArray(field.value) ? field.value : [];
+                          if (checked) {
+                            field.onChange([...currentValue, item.name]);
+                          } else {
+                            field.onChange(currentValue.filter((v) => v !== item.name));
+                          }
+                        }}
+                      />
+                      <span className="truncate">{item.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Images */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <Label className="text-sm font-medium">Main Product Image</Label>
-          <div className="mt-2">
+          <div className="mt-2 flex flex-wrap gap-4">
             {watchMainImage ? (
-              <div className="relative inline-block">
-                <Image 
-                  src={watchMainImage} 
-                  alt="Main product image" 
+              <div className="relative">
+                <Image
+                  src={watchMainImage}
+                  alt="Main product image"
                   width={128}
                   height={128}
-                  className="object-cover rounded-md border"
+                  className="object-cover rounded-md border w-32 h-32"
                 />
                 <button
                   type="button"
@@ -664,33 +693,29 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
             )}
           </div>
         </div>
-
         <div>
           <Label className="text-sm font-medium">Additional Images (Max 3)</Label>
-          <div className="mt-2 space-y-3">
+          <div className="mt-2 flex flex-wrap gap-3">
             {watchAdditionalImages.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                {watchAdditionalImages.map((imageUrl, index) => (
-                  <div key={index} className="relative inline-block">
-                    <Image 
-                      src={imageUrl} 
-                      alt={`Additional product image ${index + 1}`} 
-                      width={96}
-                      height={96}
-                      className="object-cover rounded-md border"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeAdditionalImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 text-xs"
-                    >
-                      <X size={10} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              watchAdditionalImages.map((imageUrl, index) => (
+                <div key={index} className="relative">
+                  <Image
+                    src={imageUrl}
+                    alt={`Additional product image ${index + 1}`}
+                    width={96}
+                    height={96}
+                    className="object-cover rounded-md border w-20 h-20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeAdditionalImage(index)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 text-xs"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ))
             )}
-            
             {watchAdditionalImages.length < 3 && (
               <div>
                 <UploadButton
@@ -715,7 +740,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
                   }}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  {watchAdditionalImages.length}/3 additional images uploaded
+                  {watchAdditionalImages.length}/3 images uploaded
                 </p>
               </div>
             )}
@@ -723,7 +748,7 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
         </div>
       </div>
 
-      {/* In Stock Checkbox */}
+      {/* In Stock */}
       <div className="flex items-center gap-2">
         <Controller
           control={control}
@@ -738,16 +763,16 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
       </div>
 
       {/* Submit Button */}
-      <Button 
-        type="submit" 
-        className="w-full mt-6" 
+      <Button
+        type="submit"
+        className="w-full py-3 text-base font-semibold rounded-lg mt-6"
         disabled={submitting || isUploading}
       >
-        {submitting 
+        {submitting
           ? `${isEditMode ? 'Updating' : 'Creating'} Product...`
-          : isUploading 
-          ? "Uploading images..."
-          : `${isEditMode ? 'Update' : 'Create'} Product`
+          : isUploading
+            ? "Uploading images..."
+            : `${isEditMode ? 'Update' : 'Create'} Product`
         }
       </Button>
     </form>
