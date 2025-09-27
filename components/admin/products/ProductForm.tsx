@@ -16,16 +16,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { UploadButton } from "@/utils/uploadthing";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import Image from "next/image";
 
+interface FilterItem {
+  id: string;
+  name: string;
+}
+
+interface SubcategoryItem extends FilterItem {
+  category: string;
+}
+
 interface FilterOptions {
-  categories: string[];
-  subcategories: string[];
-  brands: string[];
-  colors: string[];
-  sizes: string[];
-  tags: string[];
+  categories: FilterItem[];
+  subcategories: SubcategoryItem[];
+  brands: FilterItem[];
+  colors: FilterItem[];
+  sizes: FilterItem[];
+  tags: FilterItem[];
+  priceRange: {
+    min: number;
+    max: number;
+  };
 }
 
 interface ProductFormValues {
@@ -44,7 +57,12 @@ interface ProductFormValues {
   inStock: boolean;
 }
 
-export default function ProductForm() {
+interface ProductFormProps {
+  productId?: string; // If provided, we're in edit mode
+  onSuccess?: () => void;
+}
+
+export default function ProductForm({ productId, onSuccess }: ProductFormProps) {
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
     subcategories: [],
@@ -52,13 +70,31 @@ export default function ProductForm() {
     colors: [],
     sizes: [],
     tags: [],
+    priceRange: { min: 0, max: 0 },
   });
 
-  const [newCategory, setNewCategory] = useState("");
-  const [newSubcategory, setNewSubcategory] = useState("");
-  const [newBrand, setNewBrand] = useState("");
+  const [newInputs, setNewInputs] = useState({
+    category: "",
+    subcategory: "",
+    brand: "",
+    color: "",
+    size: "",
+    tag: "",
+  });
+
+  const [showNewInputs, setShowNewInputs] = useState({
+    category: false,
+    subcategory: false,
+    brand: false,
+    color: false,
+    size: false,
+    tag: false,
+  });
+
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const isEditMode = !!productId;
 
   const { register, handleSubmit, watch, control, reset, setValue, getValues } =
     useForm<ProductFormValues>({
@@ -79,57 +115,105 @@ export default function ProductForm() {
       },
     });
 
-  // const watchCategory = watch("category");
+  const watchCategory = watch("category");
   const watchMainImage = watch("image");
   const watchAdditionalImages = watch("images");
-  // ✅ Get base URL from env
-  const baseRoute = process.env.NEXT_PUBLIC_API_BASE_URL
+  const baseRoute = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  // Fetch filter options from backend
+  // Fetch filter options and product data (if editing)
   useEffect(() => {
-    async function fetchFilters() {
+    async function fetchData() {
       try {
-        const res = await fetch(`${baseRoute}/api/filters/`);
-        const data = await res.json();
-        setFilters(data);
+        setLoading(true);
+        
+        // Fetch filters
+        const filtersRes = await fetch(`${baseRoute}/api/filters/`);
+        const filtersData = await filtersRes.json();
+        setFilters(filtersData);
+
+        // If editing, fetch product data
+        if (isEditMode) {
+          const productRes = await fetch(`${baseRoute}/api/products/${productId}/`);
+          const productData = await productRes.json();
+          
+          // Populate form with existing data
+          reset({
+            name: productData.name,
+            price: productData.price,
+            originalPrice: productData.originalPrice,
+            description: productData.description,
+            category: productData.category?.name || "",
+            subcategory: productData.subcategory?.name || "",
+            brand: productData.brand?.name || "",
+            colors: productData.colors?.map((c: FilterItem) => c.name) || [],
+            sizes: productData.sizes?.map((s: FilterItem) => s.name) || [],
+            tags: productData.tags?.map((t: FilterItem) => t.name) || [],
+            image: productData.image || "",
+            images: productData.images || [],
+            inStock: productData.inStock,
+          });
+        }
       } catch (err) {
-        console.error("Failed to fetch filters", err);
-        toast.error("Failed to load filter options");
+        console.error("Failed to fetch data", err);
+        toast.error("Failed to load data");
       } finally {
         setLoading(false);
       }
     }
-    fetchFilters();
-  }, []);
+    fetchData();
+  }, [productId, isEditMode, baseRoute, reset]);
 
-  // Use all subcategories for now; filter by category if your backend supports it
-  const subcategoryOptions = filters.subcategories;
+  // Filter subcategories based on selected category
+  const availableSubcategories = watchCategory
+    ? filters.subcategories.filter(sub => sub.category === watchCategory)
+    : filters.subcategories;
 
-  const addNewCategory = () => {
-    if (newCategory && !filters.categories.includes(newCategory)) {
-      setFilters({ ...filters, categories: [...filters.categories, newCategory] });
-      setValue("category", newCategory);
-      setNewCategory("");
-    }
+  const toggleNewInput = (field: keyof typeof showNewInputs) => {
+    setShowNewInputs(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const addNewSubcategory = () => {
-    if (newSubcategory && !filters.subcategories.includes(newSubcategory)) {
-      setFilters({
-        ...filters,
-        subcategories: [...filters.subcategories, newSubcategory],
-      });
-      setValue("subcategory", newSubcategory);
-      setNewSubcategory("");
-    }
-  };
+  const addNewFilter = (field: keyof typeof newInputs) => {
+    const value = newInputs[field].trim();
+    if (!value) return;
 
-  const addNewBrand = () => {
-    if (newBrand && !filters.brands.includes(newBrand)) {
-      setFilters({ ...filters, brands: [...filters.brands, newBrand] });
-      setValue("brand", newBrand);
-      setNewBrand("");
+    switch (field) {
+      case 'category':
+        if (!filters.categories.find(c => c.name === value)) {
+          setValue('category', value);
+        }
+        break;
+      case 'subcategory':
+        if (!filters.subcategories.find(s => s.name === value)) {
+          setValue('subcategory', value);
+        }
+        break;
+      case 'brand':
+        if (!filters.brands.find(b => b.name === value)) {
+          setValue('brand', value);
+        }
+        break;
+      case 'color':
+        const currentColors = getValues('colors');
+        if (!currentColors.includes(value)) {
+          setValue('colors', [...currentColors, value]);
+        }
+        break;
+      case 'size':
+        const currentSizes = getValues('sizes');
+        if (!currentSizes.includes(value)) {
+          setValue('sizes', [...currentSizes, value]);
+        }
+        break;
+      case 'tag':
+        const currentTags = getValues('tags');
+        if (!currentTags.includes(value)) {
+          setValue('tags', [...currentTags, value]);
+        }
+        break;
     }
+
+    setNewInputs(prev => ({ ...prev, [field]: "" }));
+    setShowNewInputs(prev => ({ ...prev, [field]: false }));
   };
 
   const removeMainImage = () => {
@@ -148,367 +232,496 @@ export default function ProductForm() {
       return;
     }
 
+    setSubmitting(true);
     try {
-      // Convert price fields to float before sending to the backend
-      const payload = {
-        ...data,
+      // Determine which fields to send based on what exists in our filters
+      const payload: any = {
+        name: data.name,
         price: parseFloat(String(data.price)),
         originalPrice: data.originalPrice ? parseFloat(String(data.originalPrice)) : undefined,
+        description: data.description,
+        image: data.image,
+        images: data.images,
+        inStock: data.inStock,
       };
 
-      const res = await fetch(`${baseRoute}/api/products/`, {
-        method: "POST",
+      // Handle category - use ID if exists, otherwise use name for upsert
+      const existingCategory = filters.categories.find(c => c.name === data.category);
+      if (existingCategory) {
+        payload.category_id = existingCategory.id;
+      } else if (data.category) {
+        payload.category_name = data.category;
+      }
+
+      // Handle subcategory
+      const existingSubcategory = filters.subcategories.find(s => s.name === data.subcategory);
+      if (existingSubcategory) {
+        payload.subcategory_id = existingSubcategory.id;
+      } else if (data.subcategory) {
+        payload.subcategory_name = data.subcategory;
+      }
+
+      // Handle brand
+      const existingBrand = filters.brands.find(b => b.name === data.brand);
+      if (existingBrand) {
+        payload.brand_id = existingBrand.id;
+      } else if (data.brand) {
+        payload.brand_name = data.brand;
+      }
+
+      // Handle many-to-many fields (supports all 4 scenarios)
+      const handleManyToMany = (values: string[], filterList: FilterItem[], fieldName: string) => {
+        const existingIds: string[] = [];
+        const newNames: string[] = [];
+
+        values.forEach(value => {
+          const existing = filterList.find(item => item.name === value);
+          if (existing) {
+            existingIds.push(existing.id);
+          } else {
+            newNames.push(value);
+          }
+        });
+
+        if (existingIds.length > 0) {
+          payload[`${fieldName}_ids`] = existingIds;
+        }
+        if (newNames.length > 0) {
+          payload[`${fieldName}_names`] = newNames;
+        }
+      };
+
+      handleManyToMany(data.colors, filters.colors, 'color');
+      handleManyToMany(data.sizes, filters.sizes, 'size');
+      handleManyToMany(data.tags, filters.tags, 'tag');
+
+      const url = isEditMode 
+        ? `${baseRoute}/api/products/${productId}/`
+        : `${baseRoute}/api/products/`;
+      
+      const method = isEditMode ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Failed to create product");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || `Failed to ${isEditMode ? 'update' : 'create'} product`);
+      }
 
-      toast.success("Product created successfully!");
-      reset();
+      toast.success(`Product ${isEditMode ? 'updated' : 'created'} successfully!`);
+      if (!isEditMode) {
+        reset();
+      }
+      onSuccess?.();
     } catch (err) {
       console.error(err);
-      toast.error("Error creating product");
+      toast.error(`Error ${isEditMode ? 'updating' : 'creating'} product`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // Show loading spinner or message until filters are loaded
   if (loading) {
-    return <div>Loading filter options...</div>;
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {/* Name */}
-      <div>
-        <Label>Name</Label>
-        <Input {...register("name", { required: true })} placeholder="Product Name" />
+    <div className="w-full max-w-2xl mx-auto p-4 space-y-6">
+      {/* Basic Product Info */}
+      <div className="space-y-4">
+        <div>
+          <Label className="text-sm font-medium">Name *</Label>
+          <Input 
+            {...register("name", { required: true })} 
+            placeholder="Product Name"
+            className="mt-1"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-sm font-medium">Price *</Label>
+            <Input
+              type="number"
+              step="0.01"
+              {...register("price", {
+                required: true,
+                valueAsNumber: true,
+              })}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-sm font-medium">Original Price</Label>
+            <Input
+              type="number"
+              step="0.01"
+              {...register("originalPrice", {
+                valueAsNumber: true,
+              })}
+              className="mt-1"
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium">Description *</Label>
+          <Textarea 
+            {...register("description", { required: true })} 
+            rows={3}
+            className="mt-1"
+          />
+        </div>
       </div>
 
-      {/* Price */}
+      {/* Category Selection */}
       <div>
-        <Label>Price</Label>
-        <Input
-          type="number"
-          step="0.01"
-          {...register("price", {
-            required: true,
-            valueAsNumber: true,
-          })}
-        />
-      </div>
-
-      {/* Original Price */}
-      <div>
-        <Label>Original Price</Label>
-        <Input
-          type="number"
-          step="0.01"
-          {...register("originalPrice", {
-            valueAsNumber: true,
-          })}
-        />
-      </div>
-
-      {/* Description */}
-      <div>
-        <Label>Description</Label>
-        <Textarea {...register("description", { required: true })} rows={4} />
-      </div>
-
-      {/* Category */}
-      <div>
-        <Label>Category</Label>
+        <Label className="text-sm font-medium">Category</Label>
         <Controller
           control={control}
           name="category"
           render={({ field }) => (
-            <div className="flex gap-2 items-center">
-              <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filters.categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Add new"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-              />
-              <Button type="button" onClick={addNewCategory}>
-                Add
-              </Button>
+            <div className="mt-1 space-y-2">
+              <div className="flex gap-2">
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select or add category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filters.categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => toggleNewInput('category')}
+                >
+                  <Plus size={16} />
+                </Button>
+              </div>
+              {showNewInputs.category && (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="New category name"
+                    value={newInputs.category}
+                    onChange={(e) => setNewInputs(prev => ({ ...prev, category: e.target.value }))}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('category'))}
+                  />
+                  <Button type="button" onClick={() => addNewFilter('category')}>
+                    Add
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         />
       </div>
 
-      {/* Subcategory */}
+      {/* Subcategory Selection */}
       <div>
-        <Label>Subcategory</Label>
+        <Label className="text-sm font-medium">Subcategory</Label>
         <Controller
           control={control}
           name="subcategory"
           render={({ field }) => (
-            <div className="flex gap-2 items-center">
-              <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select subcategory" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subcategoryOptions.map((sc) => (
-                    <SelectItem key={sc} value={sc}>
-                      {sc}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Add new"
-                value={newSubcategory}
-                onChange={(e) => setNewSubcategory(e.target.value)}
-              />
-              <Button type="button" onClick={addNewSubcategory}>
-                Add
-              </Button>
+            <div className="mt-1 space-y-2">
+              <div className="flex gap-2">
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select or add subcategory" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSubcategories.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.name}>
+                        {sub.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => toggleNewInput('subcategory')}
+                >
+                  <Plus size={16} />
+                </Button>
+              </div>
+              {showNewInputs.subcategory && (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="New subcategory name"
+                    value={newInputs.subcategory}
+                    onChange={(e) => setNewInputs(prev => ({ ...prev, subcategory: e.target.value }))}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('subcategory'))}
+                  />
+                  <Button type="button" onClick={() => addNewFilter('subcategory')}>
+                    Add
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         />
       </div>
 
-      {/* Brand */}
+      {/* Brand Selection */}
       <div>
-        <Label>Brand</Label>
+        <Label className="text-sm font-medium">Brand</Label>
         <Controller
           control={control}
           name="brand"
           render={({ field }) => (
-            <div className="flex gap-2 items-center">
-              <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select brand" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filters.brands.map((b) => (
-                    <SelectItem key={b} value={b}>
-                      {b}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="mt-1 space-y-2">
+              <div className="flex gap-2">
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select or add brand" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filters.brands.map((brand) => (
+                      <SelectItem key={brand.id} value={brand.name}>
+                        {brand.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => toggleNewInput('brand')}
+                >
+                  <Plus size={16} />
+                </Button>
+              </div>
+              {showNewInputs.brand && (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="New brand name"
+                    value={newInputs.brand}
+                    onChange={(e) => setNewInputs(prev => ({ ...prev, brand: e.target.value }))}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter('brand'))}
+                  />
+                  <Button type="button" onClick={() => addNewFilter('brand')}>
+                    Add
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        />
+      </div>
+
+      {/* Multi-select sections */}
+      {[
+        { name: 'sizes', label: 'Sizes', data: filters.sizes },
+        { name: 'colors', label: 'Colors', data: filters.colors },
+        { name: 'tags', label: 'Tags', data: filters.tags }
+      ].map(({ name, label, data }) => (
+        <div key={name}>
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm font-medium">{label}</Label>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={() => toggleNewInput(name as keyof typeof showNewInputs)}
+            >
+              <Plus size={14} className="mr-1" />
+              Add New
+            </Button>
+          </div>
+          
+          {showNewInputs[name as keyof typeof showNewInputs] && (
+            <div className="flex gap-2 mb-3">
               <Input
-                placeholder="Add new"
-                value={newBrand}
-                onChange={(e) => setNewBrand(e.target.value)}
+                placeholder={`New ${name.slice(0, -1)} name`}
+                value={newInputs[name as keyof typeof newInputs]}
+                onChange={(e) => setNewInputs(prev => ({ ...prev, [name]: e.target.value }))}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewFilter(name as keyof typeof newInputs))}
+                className="text-sm"
               />
-              <Button type="button" onClick={addNewBrand}>
+              <Button 
+                type="button" 
+                size="sm"
+                onClick={() => addNewFilter(name as keyof typeof newInputs)}
+              >
                 Add
               </Button>
             </div>
           )}
-        />
-      </div>
-
-      {/* Sizes */}
-      <div>
-        <Label>Sizes</Label>
-        <Controller
-          control={control}
-          name="sizes"
-          render={({ field }) => (
-            <div className="flex flex-wrap gap-2">
-              {filters.sizes.map((size) => (
-                <label key={size} className="flex items-center gap-1">
-                  <Checkbox
-                    checked={field.value.includes(size)}
-                    onCheckedChange={(checked) => {
-                      if (checked) field.onChange([...field.value, size]);
-                      else field.onChange(field.value.filter((v) => v !== size));
-                    }}
-                  />
-                  {size}
-                </label>
-              ))}
-            </div>
-          )}
-        />
-      </div>
-
-      {/* Colors */}
-      <div>
-        <Label>Colors</Label>
-        <Controller
-          control={control}
-          name="colors"
-          render={({ field }) => (
-            <div className="flex flex-wrap gap-2">
-              {filters.colors.map((color) => (
-                <label key={color} className="flex items-center gap-1">
-                  <Checkbox
-                    checked={field.value.includes(color)}
-                    onCheckedChange={(checked) => {
-                      if (checked) field.onChange([...field.value, color]);
-                      else field.onChange(field.value.filter((v) => v !== color));
-                    }}
-                  />
-                  {color}
-                </label>
-              ))}
-            </div>
-          )}
-        />
-      </div>
-
-      {/* Tags */}
-      <div>
-        <Label>Tags</Label>
-        <Controller
-          control={control}
-          name="tags"
-          render={({ field }) => (
-            <div className="flex flex-wrap gap-2">
-              {filters.tags.map((tag) => (
-                <label key={tag} className="flex items-center gap-1">
-                  <Checkbox
-                    checked={field.value.includes(tag)}
-                    onCheckedChange={(checked) => {
-                      if (checked) field.onChange([...field.value, tag]);
-                      else field.onChange(field.value.filter((v) => v !== tag));
-                    }}
-                  />
-                  {tag}
-                </label>
-              ))}
-            </div>
-          )}
-        />
-      </div>
-
-      {/* Main Image Upload */}
-      <div>
-        <Label>Main Product Image</Label>
-        <div className="space-y-2">
-          {watchMainImage ? (
-            <div className="relative inline-block">
-              <Image 
-                src={watchMainImage} 
-                alt="Main product image" 
-                className="w-32 h-32 object-cover rounded-md border"
-              />
-              <button
-                type="button"
-                onClick={removeMainImage}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ) : (
-            <UploadButton
-              endpoint="mainImageUploader"
-              onClientUploadComplete={(res) => {
-                if (res && res[0]) {
-                  setValue("image", res[0].url);
-                  toast.success("Main image uploaded successfully!");
-                }
-                setIsUploading(false);
-              }}
-              onUploadError={(error: Error) => {
-                toast.error(`Upload failed: ${error.message}`);
-                setIsUploading(false);
-              }}
-              onUploadBegin={() => {
-                setIsUploading(true);
-              }}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Additional Images Upload */}
-      <div>
-        <Label>Additional Product Images (Optional - Max 3)</Label>
-        <div className="space-y-2">
-          {watchAdditionalImages.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {watchAdditionalImages.map((imageUrl, index) => (
-                <div key={index} className="relative inline-block">
-                  <Image 
-                    src={imageUrl} 
-                    alt={`Additional product image ${index + 1}`} 
-                    className="w-24 h-24 object-cover rounded-md border"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeAdditionalImage(index)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 text-xs"
-                  >
-                    <X size={10} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
           
-          {watchAdditionalImages.length < 3 && (
-            <UploadButton
-              endpoint="additionalImagesUploader"
-              onClientUploadComplete={(res) => {
-                if (res && res.length > 0) {
-                  const currentImages = getValues("images");
-                  const newImageUrls = res.map(file => file.url);
-                  const allImages = [...currentImages, ...newImageUrls];
-                  
-                  // Ensure we don't exceed 3 images total
-                  const limitedImages = allImages.slice(0, 3);
-                  setValue("images", limitedImages);
-                  
-                  toast.success(`${res.length} additional image(s) uploaded successfully!`);
-                }
-                setIsUploading(false);
-              }}
-              onUploadError={(error: Error) => {
-                toast.error(`Upload failed: ${error.message}`);
-                setIsUploading(false);
-              }}
-              onUploadBegin={() => {
-                setIsUploading(true);
-              }}
-            />
-          )}
+          <Controller
+            control={control}
+            name={name as keyof ProductFormValues}
+            render={({ field }) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {data.map((item) => (
+                  <label key={item.id} className="flex items-center gap-2 p-2 border rounded text-sm hover:bg-gray-50 cursor-pointer">
+                    <Checkbox
+                      checked={Array.isArray(field.value) && field.value.includes(item.name)}
+                      onCheckedChange={(checked) => {
+                        const currentValue = Array.isArray(field.value) ? field.value : [];
+                        if (checked) {
+                          field.onChange([...currentValue, item.name]);
+                        } else {
+                          field.onChange(currentValue.filter((v) => v !== item.name));
+                        }
+                      }}
+                    />
+                    <span className="truncate">{item.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          />
         </div>
-        <p className="text-sm text-gray-500">
-          {watchAdditionalImages.length}/3 additional images uploaded
-        </p>
+      ))}
+
+      {/* Image Uploads */}
+      <div className="space-y-4">
+        <div>
+          <Label className="text-sm font-medium">Main Product Image</Label>
+          <div className="mt-2">
+            {watchMainImage ? (
+              <div className="relative inline-block">
+                <Image 
+                  src={watchMainImage} 
+                  alt="Main product image" 
+                  width={128}
+                  height={128}
+                  className="object-cover rounded-md border"
+                />
+                <button
+                  type="button"
+                  onClick={removeMainImage}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <UploadButton
+                endpoint="mainImageUploader"
+                onClientUploadComplete={(res) => {
+                  if (res && res[0]) {
+                    setValue("image", res[0].url);
+                    toast.success("Main image uploaded successfully!");
+                  }
+                  setIsUploading(false);
+                }}
+                onUploadError={(error: Error) => {
+                  toast.error(`Upload failed: ${error.message}`);
+                  setIsUploading(false);
+                }}
+                onUploadBegin={() => {
+                  setIsUploading(true);
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-sm font-medium">Additional Images (Max 3)</Label>
+          <div className="mt-2 space-y-3">
+            {watchAdditionalImages.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {watchAdditionalImages.map((imageUrl, index) => (
+                  <div key={index} className="relative inline-block">
+                    <Image 
+                      src={imageUrl} 
+                      alt={`Additional product image ${index + 1}`} 
+                      width={96}
+                      height={96}
+                      className="object-cover rounded-md border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeAdditionalImage(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 text-xs"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {watchAdditionalImages.length < 3 && (
+              <div>
+                <UploadButton
+                  endpoint="additionalImagesUploader"
+                  onClientUploadComplete={(res) => {
+                    if (res && res.length > 0) {
+                      const currentImages = getValues("images");
+                      const newImageUrls = res.map(file => file.url);
+                      const allImages = [...currentImages, ...newImageUrls];
+                      const limitedImages = allImages.slice(0, 3);
+                      setValue("images", limitedImages);
+                      toast.success(`${res.length} additional image(s) uploaded successfully!`);
+                    }
+                    setIsUploading(false);
+                  }}
+                  onUploadError={(error: Error) => {
+                    toast.error(`Upload failed: ${error.message}`);
+                    setIsUploading(false);
+                  }}
+                  onUploadBegin={() => {
+                    setIsUploading(true);
+                  }}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {watchAdditionalImages.length}/3 additional images uploaded
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* In Stock */}
+      {/* In Stock Checkbox */}
       <div className="flex items-center gap-2">
         <Controller
           control={control}
           name="inStock"
           render={({ field }) => (
-            <Checkbox checked={field.value} onCheckedChange={field.onChange}>
-              In Stock
-            </Checkbox>
+            <div className="flex items-center gap-2">
+              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+              <Label className="text-sm cursor-pointer">In Stock</Label>
+            </div>
           )}
         />
       </div>
 
-      {/* Submit */}
+      {/* Submit Button */}
       <Button 
         type="submit" 
-        className="mt-4" 
-        disabled={isUploading}
+        className="w-full mt-6" 
+        disabled={submitting || isUploading}
+        onClick={handleSubmit(onSubmit)}
       >
-        {isUploading ? "Uploading images..." : "Add Product"}
+        {submitting 
+          ? `${isEditMode ? 'Updating' : 'Creating'} Product...`
+          : isUploading 
+          ? "Uploading images..."
+          : `${isEditMode ? 'Update' : 'Create'} Product`
+        }
       </Button>
-    </form>
+    </div>
   );
 }

@@ -33,8 +33,8 @@ export function FilterSidebar({
   className,
 }: FilterSidebarProps) {
   const [priceRange, setPriceRange] = useState<[number, number]>([
-    filters.minPrice || availableFilters.priceRange.min,
-    filters.maxPrice || availableFilters.priceRange.max,
+    filters.minPrice || availableFilters.priceRange?.min ,
+    filters.maxPrice || availableFilters.priceRange?.max,
   ])
 
   const updateFilter = <K extends keyof ProductFilters>(

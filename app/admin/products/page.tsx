@@ -16,9 +16,11 @@ export default function ProductsPage() {
   const [filters, setFilters] = useState<{ search?: string, category?: string, brand?: string }>({});
   const [page, setPage] = useState(1);
 
+  const baseRoute = process.env.NEXT_PUBLIC_API_BASE_URL
+
   // Fetch filter metadata
   useEffect(() => {
-    fetch("/api/admin/filters")
+    fetch(`${baseRoute}/api/filters/`)
       .then(res => res.json())
       .then(data => {
         setFiltersMeta({
@@ -39,7 +41,7 @@ export default function ProductsPage() {
     if (filters.brand) searchParams.set("brands", filters.brand);
     if (filters.search) searchParams.set("search", filters.search);
 
-    fetch(`/api/products?${searchParams.toString()}`)
+    fetch(`${baseRoute}/api/products/?${searchParams.toString()}`)
       .then(res => res.json())
       .then(data => {
         setProducts(data.products || []);
