@@ -1,5 +1,6 @@
 "use client"
 
+import { usePathname } from "next/navigation"
 import { Menu, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CartButton } from "@/components/cart/cart-button"
@@ -14,6 +15,7 @@ interface HeaderProps {
 }
 
 export function Header({ onSearch, onMenuToggle }: HeaderProps) {
+  const pathname = usePathname()
   const { user, logout } = useAuthStore()
 
   // Get initials from full name
@@ -23,6 +25,9 @@ export function Header({ onSearch, onMenuToggle }: HeaderProps) {
       ? names[0].charAt(0).toUpperCase()
       : (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase()
   }
+
+  // Hide search bar on login/register pages
+  const hideSearch = pathname === "/login" || pathname === "/register"
 
   return (
     <>
@@ -43,10 +48,12 @@ export function Header({ onSearch, onMenuToggle }: HeaderProps) {
               </Link>
             </div>
 
-            {/* Search bar */}
-            <div className="hidden md:flex flex-1 max-w-md mx-8">
-              <SearchBar onSearch={onSearch} className="w-full" />
-            </div>
+            {/* Search bar - hidden on login/register pages */}
+            {!hideSearch && (
+              <div className="hidden md:flex flex-1 max-w-md mx-8">
+                <SearchBar onSearch={onSearch} className="w-full" />
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex items-center gap-2">
@@ -77,9 +84,11 @@ export function Header({ onSearch, onMenuToggle }: HeaderProps) {
           </div>
 
           {/* Mobile search */}
-          <div className="md:hidden pb-4">
-            <SearchBar onSearch={onSearch} className="w-full" />
-          </div>
+          {!hideSearch && (
+            <div className="md:hidden pb-4">
+              <SearchBar onSearch={onSearch} className="w-full" />
+            </div>
+          )}
         </div>
       </header>
 

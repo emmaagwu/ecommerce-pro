@@ -5,14 +5,15 @@ import { useEffect, useState } from "react"
 import { ProductDetailView } from "@/components/product-detail-view"
 import { RelatedProducts } from "@/components/related-products"
 import type { Product } from "@/lib/types"
-import { transformProduct } from "@/hooks/use-products"  // <-- import here
+import { transformProduct } from "@/hooks/use-products"
+import { ProductDetailSkeleton } from "@/components/product/ProductDetailSkeleton"
 
 interface ProductPageProps {
   params: Promise<{ id: string }>
 }
 
 export default function ProductPage({ params }: ProductPageProps) {
-  const { id } = use(params) // unwrap the promise
+  const { id } = use(params)
 
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
@@ -22,12 +23,12 @@ export default function ProductPage({ params }: ProductPageProps) {
   useEffect(() => {
     fetch(`${baseRoute}/api/products/${id}`)
       .then(res => res.json())
-      .then(data => setProduct(transformProduct(data))) // <-- transform here
+      .then(data => setProduct(transformProduct(data)))
       .finally(() => setLoading(false))
   }, [id, baseRoute])
 
-  if (loading) return <div>Loading...</div>
-  if (!product) return <div>Product not found</div>
+  if (loading) return <ProductDetailSkeleton />
+  if (!product) return <div className="min-h-screen flex items-center justify-center">Product not found</div>
 
   return (
     <div className="min-h-screen bg-background">
@@ -36,5 +37,3 @@ export default function ProductPage({ params }: ProductPageProps) {
     </div>
   )
 }
-
-
