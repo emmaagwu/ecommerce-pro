@@ -43,7 +43,7 @@ export function Header({ onSearch, onMenuToggle }: HeaderProps) {
             <div className="flex items-center">
               <Link href="/">
                 <h1 className="text-xl font-bold text-foreground hover:text-primary transition-colors cursor-pointer">
-                  StyleHub
+                  Ecommerce Pro
                 </h1>
               </Link>
             </div>
